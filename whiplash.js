@@ -43,7 +43,7 @@
     };
 
     var makeGuard = function(x, y, size) {
-		var speed = 0.5;
+		var speed = 0.25;
         return {
             last: new Date().getTime(),
             x: x, y: y, dx: (Math.random() > 0.5) ? speed : -speed,
@@ -151,7 +151,7 @@
         });
         board.resize(resize);
         resize();
-	
+
 		viewport.on('keydown', function(event) {
 			if (event.keyCode == 37 || event.keyCode == 65) {
 				player.dx = -player.speed;
