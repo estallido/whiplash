@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, user-scalable=no" />
+<meta name="viewport" content="initial-scale=1, maximum-scale=1" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<title>Whiplash Paradox</title>
+<style>
+    html, body
+    { padding: 0; margin: 0; position: relative; }
+    h1 { text-align: center; }
+</style>
+
+<h1>Whiplash Paradox</h1>
+<div class="whiplash"></div>
+
+<script src="jquery.min.js"></script>
+<!--[if lt IE 9]><script>//<![CDATA[
+  jQuery(function($) {
+     $.getScript('http://ajax.googleapis.com/ajax/libs/' +
+                 'chrome-frame/1/CFInstall.min.js',
+                 function() { CFInstall.check(); }); });
+//]]></script><![endif]-->
+<script src="whiplash.js"></script>
+<script>//<![CDATA[
+jQuery(function($) { whiplash.go($, $('.whiplash'), $(window)); });
+//]]></script>
