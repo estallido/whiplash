@@ -88,6 +88,8 @@
             bodyColor: 'darkgray',
             eyeColor: 'black',
             x: x, y: y, direction: 0, size: size,
+            blinkFreq: 1000, blinkLength: 100,
+            blinkPhase: Math.random() * 1000,
             update: function(state, now) {
                 var steps = 0.25 * (now - this.last);
                 var rots = 0.005 * (now - this.last);
