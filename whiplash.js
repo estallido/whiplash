@@ -10,40 +10,66 @@
     var makePlayer = function(x, y, size) {
         return {
             last: new Date().getTime(),
-            x: x, y: y, dx: 0, dy: 0, speed: 0.5,
+            aup: false, adown: false, aleft: false, aright: false,
+            x: x, y: y, direction: 0,
             update: function(state, now) {
-                this.x += this.dx * (now - this.last);
-                if (this.x < 0) {
-                    this.x = 0;
-                    this.dx = -this.dx;
-                } else if (this.x > state.width) {
-                    this.x -= this.x - state.width;
-                    this.dx = -this.dx;
+                var steps = 0.25 * (now - this.last);
+                var rots = 0.005 * (now - this.last);
+                if (this.aleft && !this.aright) {
+                    this.direction -= rots;
+                } else if (!this.aleft && this.aright) {
+                    this.direction += rots;
                 }
-                this.y += this.dy * (now - this.last);
-                if (this.y < 0) {
-                    this.y = 0;
-                    this.dy = -this.dy;
-                } else if (this.y > state.height) {
-                    this.y = state.height;
-                    this.dy = -this.dy;
+
+                if (this.aup && !this.adown) {
+                    this.x += Math.cos(this.direction) * steps;
+                    this.y += Math.sin(this.direction) * steps;
+                } else if (!this.aup && this.adown) {
+                    this.x -= Math.cos(this.direction) * steps * 0.75;
+                    this.y -= Math.sin(this.direction) * steps * 0.75;
                 }
                 this.last = now;
             },
             draw: function(state, ctx) {
+                var scale = state.width / 35;
+                ctx.save();
+
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, state.width / 50,
-                        0, Math.PI * 2);
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.direction);
+                ctx.scale(0.8, 1);
+                ctx.moveTo(scale, 0);
+                ctx.arc(0, 0, scale, 0, Math.PI * 2);
+                ctx.fillStyle = 'orange';
+                ctx.fill();
+
+                ctx.scale(1.25, 1);
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(0, 0, scale * 0.75, 0, Math.PI * 2);
                 ctx.fillStyle = 'orangered';
                 ctx.fill();
-                ctx.strokeStyle = 'orange';
-                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(scale * 0.2, scale * -0.2, scale * 0.1,
+                        0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(scale * 0.2, scale * 0.2,
+                        scale * 0.1, 0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+
+                ctx.restore();
             }
         };
     };
 
     var makeGuard = function(x, y, size) {
-		var speed = 0.25;
+	var speed = 0;
         return {
             last: new Date().getTime(),
             x: x, y: y, dx: (Math.random() > 0.5) ? speed : -speed,
@@ -68,13 +94,39 @@
                 this.last = now;
             },
             draw: function(state, ctx) {
+                var scale = state.width / 35;
+                ctx.save();
+
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, state.width / 50,
-                        0, Math.PI * 2);
-                ctx.fillStyle = 'darkblue';
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.direction);
+                ctx.scale(0.8, 1);
+                ctx.moveTo(scale, 0);
+                ctx.arc(0, 0, scale, 0, Math.PI * 2);
+                ctx.fillStyle = 'darkgray';
                 ctx.fill();
-                ctx.strokeStyle = 'blue';
-                ctx.stroke();
+
+                ctx.scale(1.25, 1);
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(0, 0, scale * 0.75, 0, Math.PI * 2);
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(scale * 0.2, scale * -0.2, scale * 0.1,
+                        0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(scale, 0);
+                ctx.arc(scale * 0.2, scale * 0.2,
+                        scale * 0.1, 0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+
+                ctx.restore();
             }
         };
     };
@@ -91,10 +143,6 @@
            height: 320, width: 320,
            characters: []
         };
-		var player = makePlayer(60, 60, 30);
-        state.characters.push(makeGuard(25, 25, 30));
-        state.characters.push(makeGuard(225, 225, 30));
-		state.characters.push(player);
 
         var draw_id = 0;
         var draw = function() {
@@ -130,8 +178,8 @@
         var redraw = function()
         { if (!draw_id) draw_id = requestAnimationFrame(draw); };
         var resize = function(event) {
-			board.width(viewport.width());
-			board.height(viewport.height() * 0.85);
+	    board.width(viewport.width());
+	    board.height(viewport.height() * 0.85);
             state.width = board.innerWidth();
             state.height = board.innerHeight();
 
@@ -152,24 +200,40 @@
         board.resize(resize);
         resize();
 
-		viewport.on('keydown', function(event) {
-			if (event.keyCode == 37 || event.keyCode == 65) {
-				player.dx = -player.speed;
-				player.dy = 0;
-			} else if (event.keyCode == 38 || event.keyCode == 87) {
-				player.dx = 0;
-				player.dy = -player.speed;
-			} else if (event.keyCode == 39 || event.keyCode == 68) {
-				player.dx = player.speed;
-				player.dy = 0;
-			} else if (event.keyCode == 40 || event.keyCode == 83) {
-				player.dx = 0;
-				player.dy = player.speed;
-			}
-		});
-		viewport.on('keyup', function(event) {
-			player.dx = player.dy = 0;
-		});
+	var player = makePlayer(state.width / 2, state.height / 2, 30);
+        state.characters.push(makeGuard(25, 25, 30));
+        state.characters.push(makeGuard(225, 225, 30));
+	state.characters.push(player);
+
+	viewport.on('keydown', function(event) {
+	    if (event.keyCode == 37 || event.keyCode == 65) {
+		player.aleft = true;
+	    } else if (event.keyCode == 38 || event.keyCode == 87) {
+                player.aup = true;
+	    } else if (event.keyCode == 39 || event.keyCode == 68) {
+		player.aright = true;
+	    } else if (event.keyCode == 40 || event.keyCode == 83) {
+		player.adown = true;
+	    }
+	});
+	viewport.on('keyup', function(event) {
+	    if (event.keyCode == 37 || event.keyCode == 65) {
+		player.aleft = false;
+	    } else if (event.keyCode == 38 || event.keyCode == 87) {
+                player.aup = false;
+	    } else if (event.keyCode == 39 || event.keyCode == 68) {
+		player.aright = false;
+	    } else if (event.keyCode == 40 || event.keyCode == 83) {
+		player.adown = false;
+	    }
+	});
+
+
+        var heartbeat = function() {
+            console.log("Thunk");
+            setTimeout(heartbeat, 2000);
+        };
+        heartbeat();
 
     }
 })(typeof exports === 'undefined'? this['whiplash'] = {}: exports);
