@@ -7,11 +7,53 @@
 (function(whiplash) {
     "use strict";
 
+    var drawPerson = function(character, ctx, now) {
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.translate(character.x, character.y);
+        ctx.rotate(character.direction);
+        ctx.scale(0.8, 1);
+        ctx.moveTo(character.size, 0);
+        ctx.arc(0, 0, character.size, 0, Math.PI * 2);
+        ctx.fillStyle = character.bodyColor;
+        ctx.fill();
+
+        ctx.scale(1.25, 1);
+        ctx.beginPath();
+        ctx.moveTo(character.size, 0);
+        ctx.arc(0, 0, character.size * 0.75, 0, Math.PI * 2);
+        ctx.fillStyle = character.headColor;
+        ctx.fill();
+
+        if (!character.blinkFreq || !character.blinkLength ||
+            ((now + character.blinkPhase) % character.blinkFreq) >
+            character.blinkLength) {
+            ctx.beginPath();
+            ctx.arc(character.size * 0.2, character.size * -0.2,
+                    character.size * 0.1, 0, Math.PI * 2);
+            ctx.fillStyle = character.eyeColor;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(character.size, 0);
+            ctx.arc(character.size * 0.2, character.size * 0.2,
+                    character.size * 0.1, 0, Math.PI * 2);
+            ctx.fillStyle = character.eyeColor;
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
     var makePlayer = function(x, y, size) {
         return {
             last: new Date().getTime(),
-            aup: false, adown: false, aleft: false, aright: false,
             x: x, y: y, direction: 0,
+            aup: false, adown: false, aleft: false, aright: false,
+            headColor: 'orangered',
+            bodyColor: 'orange',
+            eyeColor: 'blue',
+            blinkFreq: 4000, blinkLength: 250, blinkPhase: 0,
             update: function(state, now) {
                 var steps = 0.25 * (now - this.last);
                 var rots = 0.005 * (now - this.last);
@@ -30,40 +72,9 @@
                 }
                 this.last = now;
             },
-            draw: function(state, ctx) {
-                var scale = state.width / 35;
-                ctx.save();
-
-                ctx.beginPath();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.direction);
-                ctx.scale(0.8, 1);
-                ctx.moveTo(scale, 0);
-                ctx.arc(0, 0, scale, 0, Math.PI * 2);
-                ctx.fillStyle = 'orange';
-                ctx.fill();
-
-                ctx.scale(1.25, 1);
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(0, 0, scale * 0.75, 0, Math.PI * 2);
-                ctx.fillStyle = 'orangered';
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(scale * 0.2, scale * -0.2, scale * 0.1,
-                        0, Math.PI * 2);
-                ctx.fillStyle = 'black';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(scale * 0.2, scale * 0.2,
-                        scale * 0.1, 0, Math.PI * 2);
-                ctx.fillStyle = 'black';
-                ctx.fill();
-
-                ctx.restore();
+            draw: function(state, ctx, now) {
+                this.size = state.width / 35;
+                drawPerson(this, ctx, now);
             }
         };
     };
@@ -72,8 +83,10 @@
 	var speed = 0;
         return {
             last: new Date().getTime(),
-            x: x, y: y, dx: (Math.random() > 0.5) ? speed : -speed,
-            dy: 0,
+            headColor: 'blue',
+            bodyColor: 'darkgray',
+            eyeColor: 'black',
+            x: x, y: y, direction: 0,
             update: function(state, now) {
                 this.x += this.dx * (now - this.last);
                 if (this.x < 0) {
@@ -93,40 +106,9 @@
                 }
                 this.last = now;
             },
-            draw: function(state, ctx) {
-                var scale = state.width / 35;
-                ctx.save();
-
-                ctx.beginPath();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.direction);
-                ctx.scale(0.8, 1);
-                ctx.moveTo(scale, 0);
-                ctx.arc(0, 0, scale, 0, Math.PI * 2);
-                ctx.fillStyle = 'darkgray';
-                ctx.fill();
-
-                ctx.scale(1.25, 1);
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(0, 0, scale * 0.75, 0, Math.PI * 2);
-                ctx.fillStyle = 'blue';
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(scale * 0.2, scale * -0.2, scale * 0.1,
-                        0, Math.PI * 2);
-                ctx.fillStyle = 'black';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.moveTo(scale, 0);
-                ctx.arc(scale * 0.2, scale * 0.2,
-                        scale * 0.1, 0, Math.PI * 2);
-                ctx.fillStyle = 'black';
-                ctx.fill();
-
-                ctx.restore();
+            draw: function(state, ctx, now) {
+                this.size = state.width / 35;
+                drawPerson(this, ctx, now);
             }
         };
     };
@@ -167,7 +149,7 @@
                 ctx.clearRect(0, 0, width, height);
 
                 state.characters.forEach(function(character) {
-                    character.draw(state, ctx);
+                    character.draw(state, ctx, now);
                 });
                 
                 ctx.restore();
