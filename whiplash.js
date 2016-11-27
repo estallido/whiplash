@@ -7,6 +7,8 @@
 (function(whiplash) {
     "use strict";
 
+    var player;
+
     var drawPerson = function(character, ctx, now) {
         ctx.save();
 
@@ -48,7 +50,7 @@
     var makePlayer = function(x, y, size) {
         return {
             last: new Date().getTime(),
-            x: x, y: y, direction: 0,
+            x: x, y: y, direction: 0, size: size,
             aup: false, adown: false, aleft: false, aright: false,
             headColor: 'orangered',
             bodyColor: 'orange',
@@ -80,34 +82,36 @@
     };
 
     var makeGuard = function(x, y, size) {
-	var speed = 0;
         return {
             last: new Date().getTime(),
             headColor: 'blue',
             bodyColor: 'darkgray',
             eyeColor: 'black',
-            x: x, y: y, direction: 0,
+            x: x, y: y, direction: 0, size: size,
             update: function(state, now) {
-                this.x += this.dx * (now - this.last);
-                if (this.x < 0) {
-                    this.x = 0;
-                    this.dx = -this.dx;
-                } else if (this.x > state.width) {
-                    this.x -= this.x - state.width;
-                    this.dx = -this.dx;
-                }
-                this.y += this.dy * (now - this.last);
-                if (this.y < 0) {
-                    this.y = 0;
-                    this.dy = -this.dy;
-                } else if (this.y > state.height) {
-                    this.y = state.height;
-                    this.dy = -this.dy;
+                var steps = 0.25 * (now - this.last);
+                var rots = 0.005 * (now - this.last);
+                var vector = {
+                    x: player.x - this.x,
+                    y: player.y - this.y,
+                };
+                var length = Math.sqrt(
+                    vector.x * vector.x + vector.y * vector.y);
+                vector.x /= length;
+                vector.y /= length;
+                var dot = vector.x * Math.cos(this.direction) +
+                          vector.y * Math.sin(this.direction);
+                if (dot > 1.05)
+                    this.direction -= rots;
+                else if (dot < 0.95)
+                    this.direction += rots;
+                else if (length > this.size * 2) {
+                    this.x += Math.cos(this.direction) * steps;
+                    this.y += Math.sin(this.direction) * steps;
                 }
                 this.last = now;
             },
             draw: function(state, ctx, now) {
-                this.size = state.width / 35;
                 drawPerson(this, ctx, now);
             }
         };
@@ -182,9 +186,13 @@
         board.resize(resize);
         resize();
 
-	var player = makePlayer(state.width / 2, state.height / 2, 30);
-        state.characters.push(makeGuard(25, 25, 30));
-        state.characters.push(makeGuard(225, 225, 30));
+	player = makePlayer(
+            state.width / 2, state.height / 2, state.width / 35);
+        state.characters.push(makeGuard(
+            state.width / 5, state.height / 5, state.width / 35));
+        state.characters.push(makeGuard(
+            4 * state.width / 5, 4 * state.height / 5,
+            state.width / 35));
 	state.characters.push(player);
 
 	viewport.on('keydown', function(event) {
