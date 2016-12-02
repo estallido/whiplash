@@ -1,21 +1,36 @@
 // whiplash.js
 // Copyright (C) 2016 by Simon Gold and Jeff Gold.
 //
-// The Island of whiplash is a game about a prison. The prisoners
-// must escape prison, while guards and the warden must keep them
-// in, and deal with the traitor.
+// Whiplash Paradox is a game about time travel
 (function(whiplash) {
     "use strict";
 
     var player;
 
-    var drawPerson = function(character, ctx, now) {
+    var drawVision = function(character, ctx, now) {
         ctx.save();
-
-        ctx.beginPath();
         ctx.translate(character.x, character.y);
         ctx.rotate(character.direction);
+
+        if (character.visionRange && character.visionArc &&
+            character.visionColor) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, character.size * character.visionRange,
+                   -character.visionArc, character.visionArc);
+            ctx.fillStyle = character.visionColor;
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    var drawPerson = function(character, ctx, now) {
+        ctx.save();
+        ctx.translate(character.x, character.y);
+        ctx.rotate(character.direction);
+
         ctx.scale(0.8, 1);
+        ctx.beginPath();
         ctx.moveTo(character.size, 0);
         ctx.arc(0, 0, character.size, 0, Math.PI * 2);
         ctx.fillStyle = character.bodyColor;
@@ -43,7 +58,6 @@
             ctx.fillStyle = character.eyeColor;
             ctx.fill();
         }
-
         ctx.restore();
     }
 
@@ -74,6 +88,9 @@
                 }
                 this.last = now;
             },
+            drawPre: function(state, ctx, now) {
+                drawVision(this, ctx, now);
+            },
             draw: function(state, ctx, now) {
                 this.size = state.width / 35;
                 drawPerson(this, ctx, now);
@@ -90,6 +107,8 @@
             x: x, y: y, direction: 0, size: size,
             blinkFreq: 1000, blinkLength: 100,
             blinkPhase: Math.random() * 1000,
+            visionRange: 5, visionArc: Math.PI / 3,
+            visionColor: 'rgba(255, 255, 255, 0.25)',
             update: function(state, now) {
                 var steps = 0.25 * (now - this.last);
                 var rots = 0.005 * (now - this.last);
@@ -103,15 +122,16 @@
                 vector.y /= length;
                 var dot = vector.x * Math.cos(this.direction) +
                           vector.y * Math.sin(this.direction);
-                if (dot > 1.05)
-                    this.direction -= rots;
-                else if (dot < 0.95)
+                if (dot < 0.95) {
                     this.direction += rots;
-                else if (length > this.size * 2) {
+                } else if (length > this.size * this.visionRange) {
                     this.x += Math.cos(this.direction) * steps;
                     this.y += Math.sin(this.direction) * steps;
                 }
                 this.last = now;
+            },
+            drawPre: function(state, ctx, now) {
+                drawVision(this, ctx, now);
             },
             draw: function(state, ctx, now) {
                 drawPerson(this, ctx, now);
@@ -132,15 +152,17 @@
            characters: []
         };
 
-        var draw_id = 0;
+        var draw_id = 0, draw_last = 0;
         var draw = function() {
             var ii, ctx, width, height, color, lineWidth;
             var now = new Date().getTime();
             draw_id = 0;
 
+            if (now - draw_last < 1000)
 	        state.characters.forEach(function(character) {
-                character.update(state, now);
-            });
+                    character.update(state, now);
+                });
+            draw_last = now;
 
             if (board.get(0).getContext) {
                 width = board.width();
@@ -155,7 +177,12 @@
                 ctx.clearRect(0, 0, width, height);
 
                 state.characters.forEach(function(character) {
-                    character.draw(state, ctx, now);
+                    if (character.drawPre)
+                        character.drawPre(state, ctx, now);
+                });
+                state.characters.forEach(function(character) {
+                    if (character.draw)
+                        character.draw(state, ctx, now);
                 });
                 
                 ctx.restore();
