@@ -295,12 +295,16 @@
             // Recognize WASD and arrow keys
 	    if (event.keyCode == 37 || event.keyCode == 65) {
 		state.player.control.left = true;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 38 || event.keyCode == 87) {
                 state.player.control.up = true;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 39 || event.keyCode == 68) {
 		state.player.control.right = true;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 40 || event.keyCode == 83) {
 		state.player.control.down = true;
+                state.player.control.arrow = null;
 	    }
 	});
 
@@ -308,12 +312,16 @@
             // Recognize WASD and arrow keys
 	    if (event.keyCode == 37 || event.keyCode == 65) {
 		state.player.control.left = false;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 38 || event.keyCode == 87) {
                 state.player.control.up = false;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 39 || event.keyCode == 68) {
 		state.player.control.right = false;
+                state.player.control.arrow = null;
 	    } else if (event.keyCode == 40 || event.keyCode == 83) {
 		state.player.control.down = false;
+                state.player.control.arrow = null;
 	    }
 	});
 
@@ -326,13 +334,15 @@
         viewport.on('mousemove touchmove', function(event) {
             if (state.tap) {
                 var current = $.targets(event);
-                var arrow = vector.norm({ x: current.x - state.tap.x,
-                                          y: current.y - state.tap.y });
+                var mmove = { x: current.x - state.tap.x,
+                              y: current.y - state.tap.y }
+                var arrow = vector.norm(mmove);
                 if ((typeof(state.arrow) === 'undefined') ||
                     (state.arrow && vector.dot(state.arrow, arrow) >
                         Math.cos(Math.PI / 3)))
                     state.arrow = arrow;
                 else state.arrow = null;
+                state.mmove = mmove;
             }
             return false;
         });
@@ -343,9 +353,12 @@
             if (state.arrow) {
                 delta = { x: state.tap.x - state.width / 2,
                           y: state.tap.y - state.height / 2};
-                zone = Math.min(state.height, state.width) / 2;
-                if (vector.dot(delta, delta) < zone * zone)
+                size = Math.min(state.height, state.width);
+                if ((vector.dot(delta, delta) < size * size / 4) &&
+                    (vector.dot(state.mmove, state.mmove) >
+                    size * size / 144))
                     state.player.control.arrow = state.arrow;
+                else state.player.control.arrow = null;
             } else state.player.control.arrow = null;
             state.tap = null;
             return false;
