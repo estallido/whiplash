@@ -138,7 +138,12 @@
                 var dot = vector.x * Math.cos(this.direction) +
                           vector.y * Math.sin(this.direction);
                 if (dot < Math.cos(Math.PI / 10)) {
-                    this.direction += rots;
+                    if ((state.player.x - this.x) *
+                        Math.sin(this.direction) -
+                        (state.player.y - this.y) *
+                        Math.cos(this.direction) < 0)
+                        this.direction += rots;
+                    else this.direction -= rots;
                 } else if (length > this.size * this.visionRange) {
                     this.x += Math.cos(this.direction) * steps;
                     this.y += Math.sin(this.direction) * steps;
