@@ -349,7 +349,7 @@
 
         viewport.on('mouseleave mouseup touchend', function(event) {
             var delta;
-            var zone;
+            var size;
             if (state.arrow) {
                 delta = { x: state.tap.x - state.width / 2,
                           y: state.tap.y - state.height / 2};
