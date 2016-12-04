@@ -15,9 +15,6 @@
         swipe: null, tap: null, mmove: null, arrow: null,
         characters: []
     };
-    whiplash.changeZoom = function(value) { // Debugging
-        state.zoom = value;
-    };
     var zclamp = function(state, zoom) {
         if (zoom < state.zoom.min)
             zoom = state.zoom.min;
@@ -347,8 +344,8 @@
             state.mmove = null;
             if (state.tap.touches.length > 1) {
                 state.zoom.reference = vector.sqlen({
-                    x: state.tap.touches[0].x - state.tap.touches[1],
-                    y: state.tap.touches[0].y - state.tap.touches[1]});
+                    x: state.tap.touches[0].x - state.tap.touches[1].x,
+                    y: state.tap.touches[0].y - state.tap.touches[1].y});
             } else state.arrow = undefined;
             redraw();
             return false;
@@ -363,10 +360,12 @@
                         Math.min(state.height, state.width) / 100) {
                         zoomref = vector.sqlen({
                             x: current.touches[0].x -
-                               current.touches[1],
+                               current.touches[1].x,
                             y: current.touches[0].y -
-                               current.touches[1]});
-                        zclamp(state, zoomref / state.zoom.reference);
+                               current.touches[1].y});
+                        zclamp(state, state.zoom.value *
+                               Math.sqrt(zoomref /
+                                   state.zoom.reference));
                     }
                 } else {
                     mmove = { x: current.x - state.tap.x,
@@ -406,7 +405,7 @@
 
         viewport.on('mousewheel', function(event) {
             zclamp(state, state.zoom.value *
-                (1 + (0.025 * event.deltaY)));
+                (1 + (0.001 * event.deltaY)));
             redraw();
             return false;
         });
