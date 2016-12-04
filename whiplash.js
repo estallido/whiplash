@@ -5,19 +5,33 @@
 (function(whiplash) {
     "use strict";
 
+    // State arrow can be either:
+    //   {x, y} - unit vector indicating direction
+    //   undefined - arrow in process of being set
+    //   null - arrow not set
     var state = {
         height: 320, width: 320,
-        zoom: 50, zclamp: { min: 10, max: 150 },
-        swipe: null, tap: null, arrow: null,
+        zoom: { value: 50, min: 10, max: 150, reference: 0 },
+        swipe: null, tap: null, mmove: null, arrow: null,
         characters: []
     };
     whiplash.changeZoom = function(value) { // Debugging
         state.zoom = value;
     };
+    var zclamp = function(state, zoom) {
+        if (zoom < state.zoom.min)
+            zoom = state.zoom.min;
+        if (zoom > state.zoom.max)
+            zoom = state.zoom.max;
+        state.zoom.value = zoom;
+    };
 
     var vector = {
         dot: function(va, vb) {
             return va.x * vb.x + va.y * vb.y;
+        },
+        sqlen: function(vector) {
+            return this.dot(vector, vector);
         },
         length: function(vector) {
             return Math.sqrt(this.dot(vector, vector));
@@ -229,10 +243,10 @@
                 ctx.lineWidth = lineWidth;
                 ctx.clearRect(0, 0, width, height);
 
-                ctx.scale(state.zoom, state.zoom)
-                ctx.translate((width / (2 * state.zoom)) -
+                ctx.scale(state.zoom.value, state.zoom.value)
+                ctx.translate((width / (2 * state.zoom.value)) -
                               state.player.x,
-                              (height / (2 * state.zoom)) -
+                              (height / (2 * state.zoom.value)) -
                               state.player.y);
 
                 drawBackground(ctx, state, now);
@@ -306,6 +320,7 @@
 		state.player.control.down = true;
                 state.player.control.arrow = null;
 	    }
+            redraw();
 	});
 
 	viewport.on('keyup', function(event) {
@@ -323,27 +338,49 @@
 		state.player.control.down = false;
                 state.player.control.arrow = null;
 	    }
+            redraw();
 	});
 
         viewport.on('mousedown touchstart', function(event) {
             state.tap = $.targets(event);
-            state.arrow = undefined;
+            state.arrow = null;
+            state.mmove = null;
+            if (state.tap.touches.length > 1) {
+                state.zoom.reference = vector.sqlen({
+                    x: state.tap.touches[0].x - state.tap.touches[1],
+                    y: state.tap.touches[0].y - state.tap.touches[1]});
+            } else state.arrow = undefined;
+            redraw();
             return false;
         });
 
         viewport.on('mousemove touchmove', function(event) {
+            var current, mmove, arrow, zoomref;
             if (state.tap) {
-                var current = $.targets(event);
-                var mmove = { x: current.x - state.tap.x,
-                              y: current.y - state.tap.y }
-                var arrow = vector.norm(mmove);
-                if ((typeof(state.arrow) === 'undefined') ||
-                    (state.arrow && vector.dot(state.arrow, arrow) >
-                        Math.cos(Math.PI / 3)))
+                current = $.targets(event);
+                if (current.touches.length > 1) {
+                    if (state.zoom.reference >
+                        Math.min(state.height, state.width) / 100) {
+                        zoomref = vector.sqlen({
+                            x: current.touches[0].x -
+                               current.touches[1],
+                            y: current.touches[0].y -
+                               current.touches[1]});
+                        zclamp(state, zoomref / state.zoom.reference);
+                    }
+                } else {
+                    mmove = { x: current.x - state.tap.x,
+                                  y: current.y - state.tap.y }
+                    arrow = vector.norm(mmove);
+                    if ((typeof(state.arrow) === 'undefined') ||
+                        (state.arrow && vector.dot(state.arrow, arrow) >
+                            Math.cos(Math.PI / 3)))
                     state.arrow = arrow;
-                else state.arrow = null;
-                state.mmove = mmove;
+                    else state.arrow = null;
+                    state.mmove = mmove;
+                }
             }
+            redraw();
             return false;
         });
 
@@ -361,16 +398,16 @@
                 else state.player.control.arrow = null;
             } else state.player.control.arrow = null;
             state.tap = null;
+            state.arrow = null;
+            state.mmove = null;
+            redraw();
             return false;
         });
 
         viewport.on('mousewheel', function(event) {
-            var zoom = state.zoom * (1 + (0.025 * event.deltaY));
-            if (zoom < state.zclamp.min)
-                zoom = state.zclamp.min;
-            if (zoom > state.zclamp.max)
-                zoom = state.zclamp.max;
-            state.zoom = zoom;
+            zclamp(state, state.zoom.value *
+                (1 + (0.025 * event.deltaY)));
+            redraw();
             return false;
         });
 
