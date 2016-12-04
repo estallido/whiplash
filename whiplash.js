@@ -6,11 +6,27 @@
     "use strict";
 
     var state = {
-        height: 320, width: 320, zoom: 50,
+        height: 320, width: 320,
+        zoom: 50, zclamp: { min: 10, max: 150 },
+        swipe: null, tap: null, arrow: null,
         characters: []
     };
-    whiplash.changeZoom = function(value) {
+    whiplash.changeZoom = function(value) { // Debugging
         state.zoom = value;
+    };
+
+    var vector = {
+        dot: function(va, vb) {
+            return va.x * vb.x + va.y * vb.y;
+        },
+        length: function(vector) {
+            return Math.sqrt(this.dot(vector, vector));
+        },
+        norm: function(vector) {
+            var l = this.length(vector);
+            return { x: vector.x / l, y: vector.y / l,
+                     originalLength: l };
+        }
     };
 
     var drawBackground = function(ctx, state, now) {
@@ -81,7 +97,9 @@
         return {
             last: new Date().getTime(),
             x: x, y: y, direction: 0, size: size, speed: 0.009,
-            aup: false, adown: false, aleft: false, aright: false,
+            control: { up: false, down: false,
+                       left: false, right: false,
+                       arrow: null },
             headColor: 'orangered',
             bodyColor: 'orange',
             eyeColor: 'blue',
@@ -89,18 +107,38 @@
             update: function(state, now) {
                 var steps = this.speed * (now - this.last);
                 var rots = 0.005 * (now - this.last);
-                if (this.aleft && !this.aright) {
-                    this.direction -= rots;
-                } else if (!this.aleft && this.aright) {
-                    this.direction += rots;
-                }
+                var dirvec;
 
-                if (this.aup && !this.adown) {
-                    this.x += Math.cos(this.direction) * steps;
-                    this.y += Math.sin(this.direction) * steps;
-                } else if (!this.aup && this.adown) {
-                    this.x -= Math.cos(this.direction) * steps * 0.75;
-                    this.y -= Math.sin(this.direction) * steps * 0.75;
+                if (this.control.arrow) {
+                    dirvec = { x: Math.cos(this.direction),
+                               y: Math.sin(this.direction) };
+                    if (vector.dot(this.control.arrow, dirvec) <
+                        Math.cos(Math.PI / 10)) {
+                        if (dirvec.x * this.control.arrow.y -
+                            dirvec.y * this.control.arrow.x < 0)
+                            this.direction -= rots;
+                        else this.direction += rots;
+                    } else {
+                        this.x += Math.cos(this.direction) * steps;
+                        this.y += Math.sin(this.direction) * steps;
+                    }
+                } else {
+                    if (this.control.left && !this.control.right) {
+                        this.direction -= rots;
+                    } else if (!this.control.left &&
+                               this.control.right) {
+                        this.direction += rots;
+                    }
+
+                    if (this.control.up && !this.control.down) {
+                        this.x += Math.cos(this.direction) * steps;
+                        this.y += Math.sin(this.direction) * steps;
+                    } else if (!this.control.up && this.control.down) {
+                        this.x -= Math.cos(this.direction) *
+                                  steps * 0.75;
+                        this.y -= Math.sin(this.direction) *
+                                  steps * 0.75;
+                    }
                 }
                 this.last = now;
             },
@@ -127,24 +165,23 @@
             update: function(state, now) {
                 var steps = this.speed * (now - this.last);
                 var rots = 0.005 * (now - this.last);
-                var vector = {
+                var pdir = vector.norm({
                     x: state.player.x - this.x,
                     y: state.player.y - this.y,
-                };
-                var length = Math.sqrt(
-                    vector.x * vector.x + vector.y * vector.y);
-                vector.x /= length;
-                vector.y /= length;
-                var dot = vector.x * Math.cos(this.direction) +
-                          vector.y * Math.sin(this.direction);
-                if (dot < Math.cos(Math.PI / 10)) {
+                });
+
+                if (vector.dot(pdir, {
+                    x: Math.cos(this.direction),
+                    y: Math.sin(this.direction) }) <
+                    Math.cos(Math.PI / 10)) {
                     if ((state.player.x - this.x) *
                         Math.sin(this.direction) -
                         (state.player.y - this.y) *
                         Math.cos(this.direction) < 0)
                         this.direction += rots;
                     else this.direction -= rots;
-                } else if (length > this.size * this.visionRange) {
+                } else if (pdir.originalLength >
+                           this.size * this.visionRange) {
                     this.x += Math.cos(this.direction) * steps;
                     this.y += Math.sin(this.direction) * steps;
                 }
@@ -255,28 +292,74 @@
 	state.characters.push(state.player = makePlayer(0, 0, 1));
 
 	viewport.on('keydown', function(event) {
+            // Recognize WASD and arrow keys
 	    if (event.keyCode == 37 || event.keyCode == 65) {
-		state.player.aleft = true;
+		state.player.control.left = true;
 	    } else if (event.keyCode == 38 || event.keyCode == 87) {
-                state.player.aup = true;
+                state.player.control.up = true;
 	    } else if (event.keyCode == 39 || event.keyCode == 68) {
-		state.player.aright = true;
+		state.player.control.right = true;
 	    } else if (event.keyCode == 40 || event.keyCode == 83) {
-		state.player.adown = true;
+		state.player.control.down = true;
 	    }
 	});
 
 	viewport.on('keyup', function(event) {
+            // Recognize WASD and arrow keys
 	    if (event.keyCode == 37 || event.keyCode == 65) {
-		state.player.aleft = false;
+		state.player.control.left = false;
 	    } else if (event.keyCode == 38 || event.keyCode == 87) {
-                state.player.aup = false;
+                state.player.control.up = false;
 	    } else if (event.keyCode == 39 || event.keyCode == 68) {
-		state.player.aright = false;
+		state.player.control.right = false;
 	    } else if (event.keyCode == 40 || event.keyCode == 83) {
-		state.player.adown = false;
+		state.player.control.down = false;
 	    }
 	});
+
+        viewport.on('mousedown touchstart', function(event) {
+            state.tap = $.targets(event);
+            state.arrow = undefined;
+            return false;
+        });
+
+        viewport.on('mousemove touchmove', function(event) {
+            if (state.tap) {
+                var current = $.targets(event);
+                var arrow = vector.norm({ x: current.x - state.tap.x,
+                                          y: current.y - state.tap.y });
+                if ((typeof(state.arrow) === 'undefined') ||
+                    (state.arrow && vector.dot(state.arrow, arrow) >
+                        Math.cos(Math.PI / 3)))
+                    state.arrow = arrow;
+                else state.arrow = null;
+            }
+            return false;
+        });
+
+        viewport.on('mouseleave mouseup touchend', function(event) {
+            var delta;
+            var zone;
+            if (state.arrow) {
+                delta = { x: state.tap.x - state.width / 2,
+                          y: state.tap.y - state.height / 2};
+                zone = Math.min(state.height, state.width) / 2;
+                if (vector.dot(delta, delta) < zone * zone)
+                    state.player.control.arrow = state.arrow;
+            } else state.player.control.arrow = null;
+            state.tap = null;
+            return false;
+        });
+
+        viewport.on('mousewheel', function(event) {
+            var zoom = state.zoom * (1 + (0.025 * event.deltaY));
+            if (zoom < state.zclamp.min)
+                zoom = state.zclamp.min;
+            if (zoom > state.zclamp.max)
+                zoom = state.zclamp.max;
+            state.zoom = zoom;
+            return false;
+        });
 
         var heartbeat = function() {
             //console.log("Thunk");

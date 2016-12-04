@@ -15,12 +15,14 @@
 <div class="whiplash"></div>
 
 <script src="jquery.min.js"></script>
+<script src="jquery.mousewheel.js"></script>
 <!--[if lt IE 9]><script>//<![CDATA[
   jQuery(function($) {
      $.getScript('http://ajax.googleapis.com/ajax/libs/' +
                  'chrome-frame/1/CFInstall.min.js',
                  function() { CFInstall.check(); }); });
 //]]></script><![endif]-->
+<script src="context.js"></script>
 <script src="whiplash.js"></script>
 <script>//<![CDATA[
 jQuery(function($) { whiplash.go($, $('.whiplash'), $(window)); });
